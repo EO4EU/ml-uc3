@@ -1,9 +1,9 @@
 default_context:
   chart_name: "uc3"
-  chart_version: "0.1.1"
+  chart_version: "0.1.2"
   need_dep_chart: "no"
   include_service: "yes"
-  service_name: "classifier"
+  service_name: "cropprediction"
   service_image_repo: "registry.apps.eo4eu.eu/eo4eu/eo4eu-cicd/eo4eu-inference-server/uc3/eo4eu-cropprediction"
   service_image_tag: "f857fc34e8b962202de1a40211edad7f4293b9a6"
   service_image_pull_policy: "Always"
