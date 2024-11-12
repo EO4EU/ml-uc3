@@ -5,7 +5,7 @@ default_context:
   include_service: "yes"
   service_name: "classifier"
   service_image_repo: "registry.apps.eo4eu.eu/eo4eu/eo4eu-cicd/eo4eu-inference-server/uc3/eo4eu-cropprediction"
-  service_image_tag: "latest"
+  service_image_tag: "81e42da7d256b5ddc0d4eaebd127baffc03b00f4"
   service_image_pull_policy: "Always"
   service_image_secret: "uc3-registry"
   service_container_port: "8080"
