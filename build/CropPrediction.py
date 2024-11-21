@@ -69,7 +69,7 @@ def create_app():
 
       # This is the entry point for the SSL model from Image to Feature service.
       # It will receive a message from the Kafka topic and then do the inference on the data.
-      # The result will be sent to the next service.
+      # The result will be sent to the next service. 
       # The message received should be a json with the following fields:
       # previous_component_end : A boolean that indicate if the previous component has finished.
       # S3_bucket_desc : A json with the following fields:
