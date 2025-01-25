@@ -150,7 +150,7 @@ def create_app():
                                           input=[]
                                           for i in range(0,data.shape[0]):
                                                 input.append({"input":data[i,:]})
-                                          asyncio.run(doInference(input))
+                                          asyncio.run(doInference(input,logger_workflow))
                                           array=[]
                                           for elem in input:
                                                 array.append(elem["result"])
