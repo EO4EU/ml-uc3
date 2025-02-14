@@ -66,7 +66,7 @@ def create_app():
       app.logger.setLevel(logging.DEBUG)
 
       logger_app = logging.LoggerAdapter(app.logger, {'source': 'ML.UC3.CropPrediction'},merge_extra=True)
-      logger_app.info("Application Starting up...", extra={'status': 'INFO'})
+      logger_app.info("Application Starting up...", extra={'status': 'DEBUG'})
 
       # This is the entry point for the SSL model from Image to Feature service.
       # It will receive a message from the Kafka topic and then do the inference on the data.
@@ -102,13 +102,13 @@ def create_app():
                   api_response = api_instance.read_namespaced_config_map(configmap_name, configmap_namespace)
                   json_data_request = json.loads(request.data)
                   json_data_configmap =json.loads(str(api_response.data['jsonSuperviserRequest']))
-                  workflow_name = json_data_request.get('workflow_name', '')
+                  workflow_name = json_data_configmap.get('workflow_name', '')
                   bootstrapServers =api_response.data['bootstrapServers']
                   Producer=KafkaProducer(bootstrap_servers=bootstrapServers,value_serializer=lambda v: json.dumps(v).encode('utf-8'),key_serializer=str.encode)
                   logger_workflow = logging.LoggerAdapter(logger_app, {'workflow_name': workflow_name,'producer':Producer},merge_extra=True)
                   logger_workflow.info('Starting Workflow',extra={'status':'START'})
-                  logger_workflow.info('Reading json data request'+str(json_data_request), extra={'status': 'INFO'})
-                  logger_workflow.info('Reading json data configmap'+str(json_data_configmap), extra={'status': 'INFO'})
+                  logger_workflow.info('Reading json data request'+str(json_data_request), extra={'status': 'DEBUG'})
+                  logger_workflow.info('Reading json data configmap'+str(json_data_configmap), extra={'status': 'DEBUG'})
                   if not(json_data_request['previous_component_end'] == 'True' or json_data_request['previous_component_end']):
                         class PreviousComponentEndException(Exception):
                               pass
@@ -125,51 +125,57 @@ def create_app():
                   #s3_file = json_data_request['S3_bucket_desc'].get('filename',None)
 
                   def threadentry():
-                        logger_workflow.info('All json data read', extra={'status': 'INFO'})
+                        try:
+                              logger_workflow.info('All json data read', extra={'status': 'DEBUG'})
 
-                        clientS3 = S3Client(aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key,endpoint_url=s3_region_endpoint)
-                        clientS3.set_as_default_client()
+                              clientS3 = S3Client(aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key,endpoint_url=s3_region_endpoint)
+                              clientS3.set_as_default_client()
 
-                        logger_workflow.info('Client is ready', extra={'status': 'INFO'})
-                        nonlocal s3_path
-                        if s3_path.endswith('/'):
-                              s3_path=s3_path[:-1]
-                        cp = CloudPath("s3://"+s3_bucket_output+'/'+s3_path+'/', client=clientS3)
-                        cpOutput = CloudPath("s3://"+s3_bucket_output+'/result-uc3-CropPrediction/')
-                        logger_workflow.info("path is s3://"+s3_bucket_output+'/result-uc3-CropPrediction/', extra={'status': 'INFO'})
+                              logger_workflow.info('Client is ready', extra={'status': 'DEBUG'})
+                              nonlocal s3_path
+                              if s3_path.endswith('/'):
+                                    s3_path=s3_path[:-1]
+                              cp = CloudPath("s3://"+s3_bucket_output+'/'+s3_path+'/', client=clientS3)
+                              cpOutput = CloudPath("s3://"+s3_bucket_output+'/result-uc3-CropPrediction/')
+                              logger_workflow.info("path is s3://"+s3_bucket_output+'/result-uc3-CropPrediction/', extra={'status': 'DEBUG'})
 
-                        scaler=joblib.load('scaler.pkl')
+                              scaler=joblib.load('scaler.pkl')
 
-                        with cpOutput.joinpath('log.txt').open('w') as fileOutput:
-                              
-                              for folder in cp.iterdir():
-                                    if folder.name.endswith('.csv'):
-                                          data=pd.read_csv(folder)
-                                          data=data[scaler.feature_names_in_]
-                                          data=scaler.transform(data)
-                                          input=[]
-                                          for i in range(0,data.shape[0]):
-                                                input.append({"input":data[i,:]})
-                                          asyncio.run(doInference(input,logger_workflow))
-                                          array=[]
-                                          for elem in input:
-                                                array.append(elem["result"])
-                                          array=np.array(array)
-                                          logger_workflow.info('Output'+str(array.shape), extra={'status': 'INFO'})
-                                          with cpOutput.joinpath(folder.name).open('w') as fileOutput:
-                                                np.savetxt(fileOutput,array,delimiter=',')
+                              with cpOutput.joinpath('log.txt').open('w') as fileOutput:
+                                    
+                                    for folder in cp.iterdir():
+                                          if folder.name.endswith('.csv'):
+                                                data=pd.read_csv(folder)
+                                                data=data[scaler.feature_names_in_]
+                                                data=scaler.transform(data)
+                                                input=[]
+                                                for i in range(0,data.shape[0]):
+                                                      input.append({"input":data[i,:]})
+                                                asyncio.run(doInference(input,logger_workflow))
+                                                array=[]
+                                                for elem in input:
+                                                      array.append(elem["result"])
+                                                array=np.array(array)
+                                                logger_workflow.info('Output'+str(array.shape), extra={'status': 'DEBUG'})
+                                                with cpOutput.joinpath(folder.name).open('w') as fileOutput:
+                                                      np.savetxt(fileOutput,array,delimiter=',')
 
-                              logger_workflow.info('Output written', extra={'status': 'INFO'})
-                              logger_workflow.info('Connecting to Kafka', extra={'status': 'INFO'})
-      
-                              response_json ={
-                              "previous_component_end": "True",
-                              "S3_bucket_desc": {
-                                    "folder": "result-uc3-CropPrediction","filename": ""
-                              },
-                              "meta_information": json_data_request.get('meta_information',{})}
-                              Producer.send(kafka_out,key='key',value=response_json)
-                              Producer.flush()
+                                    logger_workflow.info('Output written', extra={'status': 'DEBUG'})
+                                    logger_workflow.info('Connecting to Kafka', extra={'status': 'DEBUG'})
+            
+                                    response_json ={
+                                    "previous_component_end": "True",
+                                    "S3_bucket_desc": {
+                                          "folder": "result-uc3-CropPrediction","filename": ""
+                                    },
+                                    "meta_information": json_data_request.get('meta_information',{})}
+                                    Producer.send(kafka_out,key='key',value=response_json)
+                                    Producer.flush()
+                        except Exception as e:
+                              logger_workflow.error('Got exception '+str(e)+'\n'+traceback.format_exc()+'\n'+'So we are ignoring the message', extra={'status': 'CRITICAL'})
+                              return
+                        logger_workflow.info('workflow finished successfully',extra={'status':'SUCCESS'})
+                        
                   thread = threading.Thread(target=threadentry)
                   thread.start()
                   response = make_response({
@@ -182,7 +188,6 @@ def create_app():
                   response = make_response({
                   "msg": "There was a problem ignoring"
                   })
-            logger_workflow.info('workflow finished successfully',extra={'status':'SUCCESS'})
             return response
 
       # This function is used to do the inference on the data.
@@ -261,10 +266,10 @@ def create_app():
                   nb_Created+=1
                   if time.time()-last_shown>60:
                         last_shown=time.time()
-                        logger_workflow.info('done instance '+str(nb_done_instance)+'Inference done value '+str(nb_InferenceDone)+' postprocess done '+str(nb_Postprocess)+ ' created '+str(nb_Created),extra={'status': 'INFO'})
+                        logger_workflow.info('done instance '+str(nb_done_instance)+'Inference done value '+str(nb_InferenceDone)+' postprocess done '+str(nb_Postprocess)+ ' created '+str(nb_Created),extra={'status': 'DEBUG'})
             while nb_InferenceDone-nb_Created>0 or nb_Postprocess-nb_InferenceDone>0:
                   await asyncio.sleep(0)
             await asyncio.gather(*list_task,*list_postprocess)
-            logger_workflow.info('Inference done',extra={'status': 'INFO'})
+            logger_workflow.info('Inference done',extra={'status': 'DEBUG'})
             triton_client.close()
       return app
