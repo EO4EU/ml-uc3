@@ -158,7 +158,9 @@ def create_app():
                                           if 'ggd' in data.columns and 'ggd' in scaler.feature_names_in_:
                                                 data = data.rename(columns={"ggd": "gdd"})
                                           data=data[scaler.feature_names_in_]
+                                          logger_workflow.debug('Input before transform '+str(data), extra={'status': 'DEBUG'})
                                           data=scaler.transform(data)
+                                          logger_workflow.debug('Input after transform '+str(data), extra={'status': 'DEBUG'})
                                           input=[]
                                           for i in range(0,data.shape[0]):
                                                 input.append({"input":data[i,:]})
