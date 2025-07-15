@@ -144,12 +144,19 @@ def create_app():
                               scaler=joblib.load('scaler.pkl')
                               scaler.feature_names_in_ = [feature.lower() for feature in scaler.feature_names_in_]
                               scaler.feature_names_in_ = [feature.replace(" ", "_") for feature in scaler.feature_names_in_]
+                              # Fix typo: transform 'ggd' into 'gdd' if it exists in both scaler and data header
+                              if 'ggd' in scaler.feature_names_in_:
+                                    scaler.feature_names_in_ = ["gdd" if f == "ggd" else f for f in scaler.feature_names_in_]
+
                               with cpOutput.joinpath('log.txt').open('w') as fileOutput:
                                     
                                     for csv_file in cp.rglob('*.csv'):
                                           data=pd.read_csv(csv_file)
                                           data.columns = [col.lower() for col in data.columns]
                                           data.columns = [col.replace(" ", "_") for col in data.columns]
+                                          # Fix typo: transform 'ggd' into 'gdd' if it exists in both scaler and data header
+                                          if 'ggd' in data.columns and 'ggd' in scaler.feature_names_in_:
+                                                data = data.rename(columns={"ggd": "gdd"})
                                           data=data[scaler.feature_names_in_]
                                           data=scaler.transform(data)
                                           input=[]
