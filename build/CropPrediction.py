@@ -233,6 +233,8 @@ def create_app():
                         for i in range(0,length):
                               input[i,:]=toInfer[count+i]["input"]
                         inputs.append(httpclient.InferInput('input',input.shape, "FP32"))
+                        logger_workflow.debug('input shape '+str(input.shape), extra={'status': 'DEBUG'})
+                        logger_workflow.debug('input '+str(input), extra={'status': 'DEBUG'})
                         inputs[0].set_data_from_numpy(input, binary_data=False)
                         outputs.append(httpclient.InferRequestedOutput('predict', binary_data=False))
                         logger_workflow.debug('inputs '+str(inputs), extra={'status': 'DEBUG'})
