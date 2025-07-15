@@ -142,12 +142,14 @@ def create_app():
                               logger_workflow.debug("path is s3://"+s3_bucket_output+'/result-uc3-CropPrediction/', extra={'status': 'DEBUG'})
 
                               scaler=joblib.load('scaler.pkl')
+                              scaler.feature_names_in_ = [feature.lower() for feature in scaler.feature_names_in_]
 
                               with cpOutput.joinpath('log.txt').open('w') as fileOutput:
                                     
                                     for folder in cp.iterdir():
                                           if folder.name.endswith('.csv'):
                                                 data=pd.read_csv(folder)
+                                                data.columns = [col.lower() for col in data.columns]
                                                 data=data[scaler.feature_names_in_]
                                                 data=scaler.transform(data)
                                                 input=[]
