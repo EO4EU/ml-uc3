@@ -235,6 +235,7 @@ def create_app():
                         inputs.append(httpclient.InferInput('input',input.shape, "FP32"))
                         inputs[0].set_data_from_numpy(input, binary_data=False)
                         outputs.append(httpclient.InferRequestedOutput('predict', binary_data=False))
+                        logger_workflow.debug('inputs '+str(inputs), extra={'status': 'DEBUG'})
                         results = triton_client.infer('sklearn',inputs,outputs=outputs)
                         return (task,results)
                   except Exception as e:
