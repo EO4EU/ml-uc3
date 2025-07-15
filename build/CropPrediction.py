@@ -146,23 +146,27 @@ def create_app():
 
                               with cpOutput.joinpath('log.txt').open('w') as fileOutput:
                                     
-                                    for folder in cp.iterdir():
-                                          if folder.name.endswith('.csv'):
-                                                data=pd.read_csv(folder)
-                                                data.columns = [col.lower() for col in data.columns]
-                                                data=data[scaler.feature_names_in_]
-                                                data=scaler.transform(data)
-                                                input=[]
-                                                for i in range(0,data.shape[0]):
-                                                      input.append({"input":data[i,:]})
-                                                asyncio.run(doInference(input,logger_workflow))
-                                                array=[]
-                                                for elem in input:
-                                                      array.append(elem["result"])
-                                                array=np.array(array)
-                                                logger_workflow.debug('Output'+str(array.shape), extra={'status': 'DEBUG'})
-                                                with cpOutput.joinpath(folder.name).open('w') as fileOutput:
-                                                      np.savetxt(fileOutput,array,delimiter=',')
+                                    for csv_file in cp.rglob('*.csv'):
+                                          data=pd.read_csv(csv_file)
+                                          data.columns = [col.lower() for col in data.columns]
+                                          data=data[scaler.feature_names_in_]
+                                          data=scaler.transform(data)
+                                          input=[]
+                                          for i in range(0,data.shape[0]):
+                                                input.append({"input":data[i,:]})
+                                          asyncio.run(doInference(input,logger_workflow))
+                                          array=[]
+                                          for elem in input:
+                                                array.append(elem["result"])
+                                          array=np.array(array)
+                                          logger_workflow.debug('Output'+str(array.shape), extra={'status': 'DEBUG'})
+                                          # Ensure unique output path by preserving relative path
+                                          rel_path = csv_file.relative_to(cp)
+                                          output_file = cpOutput.joinpath(rel_path)
+                                          # Create parent directories if they don't exist
+                                          output_file.parent.mkdir(parents=True, exist_ok=True)
+                                          with output_file.open('w') as fileOutput:
+                                                np.savetxt(fileOutput,array,delimiter=',')
 
                                     logger_workflow.debug('Output written', extra={'status': 'DEBUG'})
                                     logger_workflow.debug('Connecting to Kafka', extra={'status': 'DEBUG'})
