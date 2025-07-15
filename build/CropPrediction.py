@@ -158,6 +158,7 @@ def create_app():
                                           if 'ggd' in data.columns and 'ggd' in scaler.feature_names_in_:
                                                 data = data.rename(columns={"ggd": "gdd"})
                                           data=data[scaler.feature_names_in_]
+                                          np.set_printoptions(threshold=np.inf)
                                           logger_workflow.debug('Input before transform '+str(data), extra={'status': 'DEBUG'})
                                           data=scaler.transform(data)
                                           logger_workflow.debug('Input after transform '+str(data), extra={'status': 'DEBUG'})
