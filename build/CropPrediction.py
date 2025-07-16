@@ -232,7 +232,7 @@ def create_app():
 
                                                 plt.tight_layout()
                                                 plt.show()
-                                                with output_file.with_suffix('_Tomato.pdf').open('wb') as img_file:
+                                                with output_file.with_name(output_file.stem + '_Tomato.pdf').open('wb') as img_file:
                                                       plt.savefig(img_file, format='pdf', bbox_inches='tight')
                                                       plt.close(fig)
                                                 
@@ -252,7 +252,7 @@ def create_app():
 
                                                 plt.tight_layout()
                                                 plt.show()
-                                                with output_file.with_suffix('_Maize.pdf').open('wb') as img_file:
+                                                with output_file.with_name(output_file.stem + '_Maize.pdf').open('wb') as img_file:
                                                       plt.savefig(img_file, format='pdf', bbox_inches='tight')
                                                       plt.close(fig)
                                                 
