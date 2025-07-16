@@ -189,8 +189,8 @@ def create_app():
                                           with output_file.open('w') as fileOutput:
                                                 output.to_csv(fileOutput, index=False)
                                           gdf = gpd.read_file('/app/NUTS_RG_20M_2021_4326.shp')
-                                          gdf.rename(columns={'NUTS_NAME': 'Province'}, inplace=True)
-                                          merged = gdf.merge(output, left_on='Province', how='left')
+                                          gdf.rename(columns={'NUTS_NAME': 'province'}, inplace=True)
+                                          merged = gdf.merge(output, left_on='province', how='left')
                                           class_colors = {
                                                 0: '#fee5d9',  # light red
                                                 1: '#fcae91', 
@@ -203,8 +203,8 @@ def create_app():
 
                                           for year in years:
                                                 year_df = output[output['Year'] == year]
-                                                gdf_filtered = gdf[gdf['Province'].isin(year_df['Province'])]
-                                                merged = gdf_filtered.merge(year_df, on='Province', how='left')
+                                                gdf_filtered = gdf[gdf['province'].isin(year_df['province'])]
+                                                merged = gdf_filtered.merge(year_df, on='province', how='left')
                                                 merged['color'] = merged['Yield prediction'].map(class_colors)
 
                                                 # Plot
