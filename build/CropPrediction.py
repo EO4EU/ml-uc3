@@ -177,7 +177,7 @@ def create_app():
                                           # Create parent directories if they don't exist
                                           output_file.parent.mkdir(parents=True, exist_ok=True)
                                           with output_file.open('w') as fileOutput:
-                                                np.savetxt(fileOutput,array,delimiter=',')
+                                                np.savetxt(fileOutput, array.astype(int), delimiter=',')
 
                                     logger_workflow.debug('Output written', extra={'status': 'DEBUG'})
                                     logger_workflow.debug('Connecting to Kafka', extra={'status': 'DEBUG'})
