@@ -159,9 +159,7 @@ def create_app():
                                                 data = data.rename(columns={"ggd": "gdd"})
                                           data=data[scaler.feature_names_in_]
                                           np.set_printoptions(threshold=np.inf)
-                                          logger_workflow.debug('Input before transform '+str(data), extra={'status': 'DEBUG'})
                                           data=scaler.transform(data)
-                                          logger_workflow.debug('Input after transform '+str(data), extra={'status': 'DEBUG'})
                                           input=[]
                                           for i in range(0,data.shape[0]):
                                                 input.append({"input":data[i,:]})
@@ -176,8 +174,11 @@ def create_app():
                                           output_file = cpOutput.joinpath(rel_path)
                                           # Create parent directories if they don't exist
                                           output_file.parent.mkdir(parents=True, exist_ok=True)
+                                          output = data[['year','province']].copy()
+                                          output['Yield prediction']= array[:,0]
+                                          output['Yield prediction'] = output['Yield prediction'].astype(int)
                                           with output_file.open('w') as fileOutput:
-                                                np.savetxt(fileOutput, array.astype(int), delimiter=',')
+                                                output.to_csv(fileOutput, index=False)
 
                                     logger_workflow.debug('Output written', extra={'status': 'DEBUG'})
                                     logger_workflow.debug('Connecting to Kafka', extra={'status': 'DEBUG'})
@@ -218,7 +219,7 @@ def create_app():
       # outputs : The result of the inference.
       async def doInference(toInfer,logger_workflow):
 
-            triton_client = httpclient.InferenceServerClient(url="sklearn.uc3.svc.cineca-inference-server.local", verbose=True,ssl=False)
+            triton_client = httpclient.InferenceServerClient(url="sklearn.uc3.svc.cineca-inference-server.local", verbose=False,ssl=False)
             nb_Created=0
             nb_InferenceDone=0
             nb_Postprocess=0
@@ -236,11 +237,8 @@ def create_app():
                         for i in range(0,length):
                               input[i,:]=toInfer[count+i]["input"]
                         inputs.append(httpclient.InferInput('input',input.shape, "FP32"))
-                        logger_workflow.debug('input shape '+str(input.shape), extra={'status': 'DEBUG'})
-                        logger_workflow.debug('input '+str(input), extra={'status': 'DEBUG'})
                         inputs[0].set_data_from_numpy(input, binary_data=False)
                         outputs.append(httpclient.InferRequestedOutput('predict', binary_data=False))
-                        logger_workflow.debug('inputs '+str(inputs), extra={'status': 'DEBUG'})
                         results = triton_client.infer('sklearn',inputs,outputs=outputs)
                         return (task,results)
                   except Exception as e:
