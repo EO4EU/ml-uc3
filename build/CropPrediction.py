@@ -170,22 +170,29 @@ def create_app():
                                           data=data[scaler.feature_names_in_]
                                           np.set_printoptions(threshold=np.inf)
                                           data=scaler.transform(data)
-                                          input=[]
+                                          input_tomato=[]
+                                          input_maize=[]
                                           for i in range(0,data.shape[0]):
-                                                input.append({"input":data[i,:]})
-                                          asyncio.run(doInference(input,logger_workflow))
-                                          array=[]
-                                          for elem in input:
-                                                array.append(elem["result"])
-                                          array=np.array(array)
-                                          logger_workflow.debug('Output'+str(array.shape), extra={'status': 'DEBUG'})
+                                                input_tomato.append({"input":data[i,:]})
+                                                input_maize.append({"input":data[i,:]})
+                                          asyncio.run(doInference(input_tomato,logger_workflow,'tomato'))
+                                          asyncio.run(doInference(input_maize,logger_workflow,'maize'))
+                                          array_tomato=[]
+                                          for elem in input_tomato:
+                                                array_tomato.append(elem["result"])
+                                          array_maize=[]
+                                          for elem in input_maize:
+                                                array_maize.append(elem["result"])
+                                          array_tomato=np.array(array_tomato)
+                                          array_maize=np.array(array_maize)
                                           # Ensure unique output path by preserving relative path
                                           rel_path = csv_file.relative_to(cp)
                                           output_file = cpOutput.joinpath(rel_path)
                                           # Create parent directories if they don't exist
                                           output_file.parent.mkdir(parents=True, exist_ok=True)
-                                          output['Yield prediction']= array[:,0]
-                                          output['Yield prediction'] = output['Yield prediction'].astype(int)
+                                          output['Yield prediction Tomato']= array_tomato[:,0]
+                                          output['Yield prediction Maize']= array_maize[:,0]
+                                          output['Yield prediction Tomato'] = output['Yield prediction Tomato'].astype(int)
                                           with output_file.open('w') as fileOutput:
                                                 output.to_csv(fileOutput, index=False)
                                           gdf = gpd.read_file('/app/NUTS_RG_20M_2021_4326.shp')
@@ -205,18 +212,19 @@ def create_app():
                                                 year_df = output[output['year'] == year]
                                                 gdf_filtered = gdf[gdf['province'].isin(year_df['province'])]
                                                 merged = gdf_filtered.merge(year_df, on='province', how='left')
-                                                merged['color'] = merged['Yield prediction'].map(class_colors)
+                                                merged['color_tomato'] = merged['Yield prediction Tomato'].map(class_colors)
+                                                merged['color_maize'] = merged['Yield prediction Maize'].map(class_colors)
 
                                                 # Plot
                                                 fig, ax = plt.subplots(1, 1, figsize=(10, 10))
                                                 merged.plot(
-                                                      color=merged['color'],
+                                                      color=merged['color_tomato'],
                                                       linewidth=0.8,
                                                       edgecolor='0.8',
                                                       ax=ax
                                                 )
 
-                                                ax.set_title(f"Yield Forecast - Year {year}")
+                                                ax.set_title(f"Tomato Yield Forecast - Year {year}")
                                                 ax.axis('off')
 
                                                 # Legend
@@ -224,9 +232,30 @@ def create_app():
 
                                                 plt.tight_layout()
                                                 plt.show()
-                                                with output_file.with_suffix('.pdf').open('wb') as img_file:
+                                                with output_file.with_suffix('_Tomato.pdf').open('wb') as img_file:
                                                       plt.savefig(img_file, format='pdf', bbox_inches='tight')
                                                       plt.close(fig)
+                                                
+                                                fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+                                                merged.plot(
+                                                      color=merged['color_maize'],
+                                                      linewidth=0.8,
+                                                      edgecolor='0.8',
+                                                      ax=ax
+                                                )
+
+                                                ax.set_title(f"Maize Yield Forecast - Year {year}")
+                                                ax.axis('off')
+
+                                                # Legend
+                                                ax.legend(handles=legend_patches, title='Yield Class', loc='lower left')
+
+                                                plt.tight_layout()
+                                                plt.show()
+                                                with output_file.with_suffix('_Maize.pdf').open('wb') as img_file:
+                                                      plt.savefig(img_file, format='pdf', bbox_inches='tight')
+                                                      plt.close(fig)
+                                                
 
 
                                     logger_workflow.debug('Output written', extra={'status': 'DEBUG'})
@@ -266,9 +295,9 @@ def create_app():
       # The result will be a json with the following fields:
       # model_name : The name of the model used.
       # outputs : The result of the inference.
-      async def doInference(toInfer,logger_workflow):
+      async def doInference(toInfer,logger_workflow,model):
 
-            triton_client = httpclient.InferenceServerClient(url="sklearn.uc3.svc.cineca-inference-server.local", verbose=False,ssl=False)
+            triton_client = httpclient.InferenceServerClient(url="sklearn2.uc3.svc.cineca-inference-server.local", verbose=False,ssl=False)
             nb_Created=0
             nb_InferenceDone=0
             nb_Postprocess=0
@@ -288,7 +317,7 @@ def create_app():
                         inputs.append(httpclient.InferInput('input',input.shape, "FP32"))
                         inputs[0].set_data_from_numpy(input, binary_data=False)
                         outputs.append(httpclient.InferRequestedOutput('predict', binary_data=False))
-                        results = triton_client.infer('sklearn',inputs,outputs=outputs)
+                        results = triton_client.infer(model,inputs,outputs=outputs)
                         return (task,results)
                   except Exception as e:
                         logger_workflow.debug('Got exception in inference '+str(e)+'\n'+traceback.format_exc(), extra={'status': 'WARNING'})
