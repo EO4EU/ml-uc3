@@ -14,3 +14,5 @@ Werkzeug
 pandas
 joblib
 scikit-learn
+geopandas
+matplotlib

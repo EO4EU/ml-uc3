@@ -50,6 +50,15 @@ import functools
 
 from KafkaHandler import KafkaHandler,DefaultContextFilter
 
+import geopandas as gpd
+
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib.patches import Patch
+import matplotlib.pyplot as plt
+
+
+
 
 def create_app():
 
@@ -179,6 +188,46 @@ def create_app():
                                           output['Yield prediction'] = output['Yield prediction'].astype(int)
                                           with output_file.open('w') as fileOutput:
                                                 output.to_csv(fileOutput, index=False)
+                                          gdf = gpd.read_file('/app/NUTS_RG_20M_2021_4326.shp')
+                                          gdf.rename(columns={'NUTS_NAME': 'Province'}, inplace=True)
+                                          merged = gdf.merge(output, left_on='Province', how='left')
+                                          class_colors = {
+                                                0: '#fee5d9',  # light red
+                                                1: '#fcae91', 
+                                                2: '#fb6a4a', 
+                                                3: '#cb181d'   # dark red
+                                          }
+
+                                          legend_patches = [Patch(color=color, label=f'Class {cls}') for cls, color in class_colors.items()]
+                                          years = output['Year'].unique()
+
+                                          for year in years:
+                                                year_df = output[output['Year'] == year]
+                                                gdf_filtered = gdf[gdf['Province'].isin(year_df['Province'])]
+                                                merged = gdf_filtered.merge(year_df, on='Province', how='left')
+                                                merged['color'] = merged['Yield prediction'].map(class_colors)
+
+                                                # Plot
+                                                fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+                                                merged.plot(
+                                                      color=merged['color'],
+                                                      linewidth=0.8,
+                                                      edgecolor='0.8',
+                                                      ax=ax
+                                                )
+
+                                                ax.set_title(f"Yield Forecast - Year {year}")
+                                                ax.axis('off')
+
+                                                # Legend
+                                                ax.legend(handles=legend_patches, title='Yield Class', loc='lower left')
+
+                                                plt.tight_layout()
+                                                plt.show()
+                                                with output_file.with_suffix('.pdf').open('wb') as img_file:
+                                                      plt.savefig(img_file, format='pdf', bbox_inches='tight')
+                                                      plt.close(fig)
+
 
                                     logger_workflow.debug('Output written', extra={'status': 'DEBUG'})
                                     logger_workflow.debug('Connecting to Kafka', extra={'status': 'DEBUG'})
