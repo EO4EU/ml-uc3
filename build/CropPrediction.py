@@ -151,7 +151,7 @@ def create_app():
                               with cpOutput.joinpath('log.txt').open('w') as fileOutput:
                                     
                                     for csv_file in cp.rglob('*.csv'):
-                                          data=pd.read_csv(csv_file)
+                                          data=pd.read_csv(csv_file).fillna(0)
                                           data.columns = [col.lower() for col in data.columns]
                                           data.columns = [col.replace(" ", "_") for col in data.columns]
                                           # Fix typo: transform 'ggd' into 'gdd' if it exists in both scaler and data header
