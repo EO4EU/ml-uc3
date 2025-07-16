@@ -190,8 +190,6 @@ def create_app():
                                                 output.to_csv(fileOutput, index=False)
                                           gdf = gpd.read_file('/app/NUTS_RG_20M_2021_4326.shp')
                                           gdf.rename(columns={'NUTS_NAME': 'province'}, inplace=True)
-                                          logger_workflow.debug("gdf columns:", str(gdf.columns),extra={'status': 'DEBUG'})
-                                          logger_workflow.debug("output columns:", str(output.columns), extra={'status': 'DEBUG'})
                                           merged = gdf.merge(output, on='province', how='left')
                                           class_colors = {
                                                 0: '#fee5d9',  # light red
