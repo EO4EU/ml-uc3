@@ -199,10 +199,10 @@ def create_app():
                                           }
 
                                           legend_patches = [Patch(color=color, label=f'Class {cls}') for cls, color in class_colors.items()]
-                                          years = output['Year'].unique()
+                                          years = output['year'].unique()
 
                                           for year in years:
-                                                year_df = output[output['Year'] == year]
+                                                year_df = output[output['year'] == year]
                                                 gdf_filtered = gdf[gdf['province'].isin(year_df['province'])]
                                                 merged = gdf_filtered.merge(year_df, on='province', how='left')
                                                 merged['color'] = merged['Yield prediction'].map(class_colors)
