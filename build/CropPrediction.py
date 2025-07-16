@@ -157,6 +157,7 @@ def create_app():
                                           # Fix typo: transform 'ggd' into 'gdd' if it exists in both scaler and data header
                                           if 'ggd' in data.columns and 'ggd' in scaler.feature_names_in_:
                                                 data = data.rename(columns={"ggd": "gdd"})
+                                          output = data[['year','province']].copy()
                                           data=data[scaler.feature_names_in_]
                                           np.set_printoptions(threshold=np.inf)
                                           data=scaler.transform(data)
@@ -174,7 +175,6 @@ def create_app():
                                           output_file = cpOutput.joinpath(rel_path)
                                           # Create parent directories if they don't exist
                                           output_file.parent.mkdir(parents=True, exist_ok=True)
-                                          output = data[['year','province']].copy()
                                           output['Yield prediction']= array[:,0]
                                           output['Yield prediction'] = output['Yield prediction'].astype(int)
                                           with output_file.open('w') as fileOutput:
