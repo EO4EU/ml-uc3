@@ -21,10 +21,6 @@
     variables: 
       REPO_BRANCH: dev
       HELM_BRANCH: dev
-  - if: $CI_COMMIT_BRANCH == "backup"
-    variables:
-      REPO_BRANCH: backup
-      HELM_BRANCH: backup
   before_script:
     - "apk --no-cache add wget"
     - "export VAULT_TOKEN=$(wget -qO- --method=PUT \
