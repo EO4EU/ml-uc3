@@ -158,8 +158,13 @@ def create_app():
                                     scaler.feature_names_in_ = ["gdd" if f == "ggd" else f for f in scaler.feature_names_in_]
 
                               with cpOutput.joinpath('log.txt').open('w') as fileOutput:
-                                    
+                                    list_files=[]
                                     for csv_file in cp.rglob('*.csv'):
+                                          list_files.append(csv_file)
+                                    file_timings=[]
+                                    total_number=len(list_files)
+                                    for file_number,csv_file in enumerate(list_files):
+                                          file_start_time=time.time()
                                           data=pd.read_csv(csv_file).fillna(0)
                                           data.columns = [col.lower() for col in data.columns]
                                           data.columns = [col.replace(" ", "_") for col in data.columns]
@@ -175,8 +180,11 @@ def create_app():
                                           for i in range(0,data.shape[0]):
                                                 input_tomato.append({"input":data[i,:]})
                                                 input_maize.append({"input":data[i,:]})
-                                          asyncio.run(doInference(input_tomato,logger_workflow,'tomato'))
-                                          asyncio.run(doInference(input_maize,logger_workflow,'maize'))
+                                          nb_line_done=0
+                                          nb_line_total=len(input_tomato)+len(input_maize)
+                                          asyncio.run(doInference(input_tomato,logger_workflow,'tomato',file_number,total_number,file_timings,nb_line_done,nb_line_total))
+                                          nb_line_done=len(input_tomato)
+                                          asyncio.run(doInference(input_maize,logger_workflow,'maize',file_number,total_number,file_timings,nb_line_done,nb_line_total))
                                           array_tomato=[]
                                           for elem in input_tomato:
                                                 array_tomato.append(elem["result"])
@@ -255,8 +263,9 @@ def create_app():
                                                 with output_file.with_name(output_file.stem + '_Maize.pdf').open('wb') as img_file:
                                                       plt.savefig(img_file, format='pdf', bbox_inches='tight')
                                                       plt.close(fig)
-                                                
 
+                                    file_end_time=time.time()
+                                    file_timings.append(file_end_time-file_start_time)                                                
 
                                     logger_workflow.debug('Output written', extra={'status': 'DEBUG'})
                                     logger_workflow.debug('Connecting to Kafka', extra={'status': 'DEBUG'})
@@ -295,7 +304,7 @@ def create_app():
       # The result will be a json with the following fields:
       # model_name : The name of the model used.
       # outputs : The result of the inference.
-      async def doInference(toInfer,logger_workflow,model):
+      async def doInference(toInfer,logger_workflow,model,file_number,total_number,file_timings,nb_line_done,nb_line_total):
 
             triton_client = httpclient.InferenceServerClient(url="sklearn2.uc3.svc.cineca-inference-server.local", verbose=False,ssl=False)
             nb_Created=0
@@ -305,6 +314,7 @@ def create_app():
             list_postprocess=set()
             list_task=set()
             last_throw=0
+
             async def consume(task):
                   try:
                         length=task[0]
@@ -326,10 +336,12 @@ def create_app():
                         return await consume(task)
             
             async def postprocess(task,results):
+                  nonlocal nb_line_done
                   length=task[0]
                   result=results.as_numpy('predict')
                   for i in range(0,length):
                         toInfer[task[1]+i]["result"]=result[i]
+                  nb_line_done+=length
 
             def postprocessTask(task):
                   list_task.discard(task)
@@ -365,6 +377,37 @@ def create_app():
                   if time.time()-last_shown>60:
                         last_shown=time.time()
                         logger_workflow.debug('done instance '+str(nb_done_instance)+'Inference done value '+str(nb_InferenceDone)+' postprocess done '+str(nb_Postprocess)+ ' created '+str(nb_Created),extra={'status': 'DEBUG'})
+                        elapsed_time = time.time() - start + 60  # Add back the 60s offset
+                        if nb_line_done > 0:
+                              rate = nb_line_done / elapsed_time
+                              remaining_lines_current_file = nb_line_total - nb_line_done
+                              estimated_remaining_seconds_current_file = remaining_lines_current_file / rate if rate > 0 else 0
+                              # Estimate time for remaining files using actual timing data from completed files
+                              if len(file_timings) > 0:
+                                    # Use average of completed files for better accuracy
+                                    avg_time_per_file = sum(file_timings) / len(file_timings)
+                              else:
+                                    # Fallback to current file estimate if no completed files yet
+                                    avg_time_per_file = elapsed_time
+                              remaining_files = total_number - file_number - 1
+                              estimated_remaining_seconds_other_files = remaining_files * avg_time_per_file
+                              total_estimated_remaining = estimated_remaining_seconds_current_file + estimated_remaining_seconds_other_files
+                              hours = int(total_estimated_remaining // 3600)
+                              minutes = int((total_estimated_remaining % 3600) // 60)
+                              seconds = int(total_estimated_remaining % 60)
+                              time_estimate = f"{hours}h {minutes}m {seconds}s" if hours > 0 else f"{minutes}m {seconds}s"
+                        elif nb_line_done == 0 and len(file_timings) > 0:
+                              # If no lines done yet, use average of completed files
+                              avg_time_per_file = sum(file_timings) / len(file_timings)
+                              remaining_files = total_number - file_number
+                              estimated_remaining_seconds_other_files = remaining_files * avg_time_per_file
+                              hours = int(estimated_remaining_seconds_other_files // 3600)
+                              minutes = int((estimated_remaining_seconds_other_files % 3600) // 60)
+                              seconds = int(estimated_remaining_seconds_other_files % 60)
+                              time_estimate = f"{hours}h {minutes}m {seconds}s" if hours > 0 else f"{minutes}m {seconds}s"
+                        else:
+                              time_estimate = "calculating..."
+                        logger_workflow.info('Progress file '+str(file_number)+'/'+str(total_number)+' : '+str(nb_line_done)+'/' +str(nb_line_total)+' lines ('+str((nb_line_done*100)//nb_line_total)+' %) - Est. remaining: '+time_estimate, extra={'status': 'INFO', 'overwrite':True})
             while nb_InferenceDone-nb_Created>0 or nb_Postprocess-nb_InferenceDone>0:
                   await asyncio.sleep(0)
             await asyncio.gather(*list_task,*list_postprocess)
