@@ -264,8 +264,8 @@ def create_app():
                                                       plt.savefig(img_file, format='pdf', bbox_inches='tight')
                                                       plt.close(fig)
 
-                                    file_end_time=time.time()
-                                    file_timings.append(file_end_time-file_start_time)                                                
+                                          file_end_time=time.time()
+                                          file_timings.append(file_end_time-file_start_time)                                                
 
                                     logger_workflow.debug('Output written', extra={'status': 'DEBUG'})
                                     logger_workflow.debug('Connecting to Kafka', extra={'status': 'DEBUG'})
