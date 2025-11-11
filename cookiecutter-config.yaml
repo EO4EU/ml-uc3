@@ -6,7 +6,7 @@ default_context:
   include_service: "yes"
   service_name: "cropprediction"
   service_image_repo: "registry.apps.eo4eu.eu/eo4eu/eo4eu-inference-server/uc3/eo4eu-cropprediction"
-  service_image_tag: "13752c3381c0efeabcd2f6e94fb109a9d7c896a5"
+  service_image_tag: "ff2eb23f6691b81e768b3e0ef36b9fe31bedf31c"
   service_image_pull_policy: "Always"
   service_image_secret: "uc3-registry"
   service_container_port: "8080"
