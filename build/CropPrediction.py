@@ -161,6 +161,7 @@ def create_app():
                                     list_files=[]
                                     for csv_file in cp.rglob('*.csv'):
                                           list_files.append(csv_file)
+                                    logger_workflow.info('Computing time estimate ...', extra={'status': 'INFO'})
                                     file_timings=[]
                                     total_number=len(list_files)
                                     for file_number,csv_file in enumerate(list_files):
