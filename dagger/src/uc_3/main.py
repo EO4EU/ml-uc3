@@ -295,6 +295,8 @@ class Uc3:
             ])
         )
         
+        return container.directory("/output")
+
     @function
     async def synthetic_report(
         self,
