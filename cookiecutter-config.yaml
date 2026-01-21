@@ -1,7 +1,7 @@
 default_context:
   chart_name: "uc3"
   chart_namespace: "uc3"
-  chart_version: "0.2.48"
+  chart_version: "0.3.0"
   need_dep_chart: "no"
   include_service: "yes"
   service_name: "cropprediction"
